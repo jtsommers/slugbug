@@ -48,15 +48,13 @@ class SlugBrain:
 
   def __init__(self, body):
     self.body = body
-    self.stateMachine = SlugStateMachine()
+    self.stateMachine = SlugStateMachine(body)
 
 
   def handle_event(self, message, details):
     # TODO: IMPLEMENT THIS METHOD
     #  (Use helper methods and classes to keep your code organized where
     #  approprioate.)
-    print message
-    print details
     self.stateMachine.transition(message, details)
     pass    
 

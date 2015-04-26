@@ -11,10 +11,12 @@ class StateMachine:
 			self.currentState.run()
 
 # A state machine for slugs
-class SlugStateMachine(StateMachine):
-	def __init__(self):
+class SlugStateMachine():
+	def __init__(self, body):
+		self.body = body
 		# Initialize to idle
-		StateMachine.__init__(self, SlugStateMachine.Idle())
+		self.currentState = SlugStateMachine.Idle()
+		self.currentState.run(self.body)
 		SlugStateMachine.OrderStates = {
 			"a": SlugStateMachine.Attack(),
 			"b": SlugStateMachine.Build(),
@@ -36,7 +38,7 @@ class SlugStateMachine(StateMachine):
 
 	def get_order(self, details):
 		if type(details) is tuple:
-			return SlugStateMachine.Move()
+			return SlugStateMachine.Move(details)
 		elif SlugStateMachine.OrderStates.has_key(details):
 			return SlugStateMachine.OrderStates[details];
 		else:
@@ -44,15 +46,18 @@ class SlugStateMachine(StateMachine):
 
 	def handle_collision(self, details):
 		print "Unhandled collision"
-		pass
+		return self.currentState
 
-	def handle_timer(self, details):
+	def handle_timer(self, details): #TODO: revisit timer
 		print "Unhandled timer"
-		pass
+		print self.currentState
+		return self.currentState
 
 	def transition(self, message, details):
 		nextState = self.get_state_for_stuff(message, details)
-		self.currentState = self.currentState.next(str(nextState))
+		self.currentState = self.currentState.next(nextState)
+		print self.currentState
+		self.currentState.run(self.body)
 		# if nextState:
 		# 	self.currentState = nextState
 
@@ -93,33 +98,52 @@ class SlugStateT(StateT):
 	# 		return potentialTransition
 	# Create a default list of transitions that reacts to orders and collisions
 	def lazy_init(self):
-		pass
-		# self.transitions = {
-		# 	"order":OrderStateMachine, # move, attack, idle, harvest, build
-		# 	"collide":CollisionStateMachine # mantis, resource, nest
-		# }
+		self.transitions = {
+			"SSMove":SlugStateMachine.Move,
+			"SSIdle":SlugStateMachine.Idle,
+			"SSAttack":SlugStateMachine.Attack,
+			"SSBuild":SlugStateMachine.Build,
+			"SSHarvest":SlugStateMachine.Harvest,
+			"Flee":SlugStateMachine.Flee
+		}
+	def run(self, body):
+		assert 0, "run not implemented"
+
+	def next(self, inp):
+		if not self.transitions:
+			self.lazy_init()
+		if self.transitions and self.transitions.has_key(str(inp)):
+			return inp
+		else:
+			print "Input not supported: ", inp
+			return self
 
 # States
 class SSIdle(SlugStateT):
-	def run(self):
+	def run(self, body):
 		# TODO: Stop everything
+		body.stop()
 		print "Idling"
 
 class SSAttack(SlugStateT):
-	def run(self):
+	def run(self, body):
 		# TODO: attack a thing
 		print "Attack"
 
 class SSBuild(SlugStateT):
-	def run(self):
+	def run(self, body):
 		print "Build"
 
 class SSHarvest(SlugStateT):
-	def run(self):
+	def lazy_init(self):
+		SlugStateT.lazy_init(self)
+		# Potentially add state transition to has and drop resources
+
+	def run(self, body):
 		print "Harvest"
 
 class SSFlee(SlugStateT):
-	def run(self):
+	def run(self, body):
 		print "Flee"
 
 class SSHasResources(SlugStateT):
@@ -129,10 +153,15 @@ class SSDumpResources(SlugStateT):
 	pass
 
 class SSHeal(SlugStateT):
-	pass
+	def run(self, body):
+		print "Heal"
 
 class SSMove(SlugStateT):
-	pass
+	def __init__(self, target):
+		SlugStateT.__init__(self)
+		self.target = target
+	def run(self, body):
+		body.go_to(self.target)
 
 SlugStateMachine.Attack = SSAttack
 SlugStateMachine.Idle = SSIdle
@@ -140,6 +169,7 @@ SlugStateMachine.Build = SSBuild
 SlugStateMachine.Harvest = SSHarvest
 SlugStateMachine.Heal = SSHeal
 SlugStateMachine.Move = SSMove
+SlugStateMachine.Flee = SSFlee
 
 
 
