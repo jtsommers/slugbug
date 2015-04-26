@@ -163,6 +163,7 @@ class SSFlee(SlugStateT):
 	def handle_collision(self, body, details):
 		what = details['what']
 		who = details['who']
+		# Heal when colliding with a nest
 		if what is "Nest":
 			body.amount += 0.05
 			if body.amount >= 1.0:
@@ -176,10 +177,6 @@ class SSHasResources(SlugStateT):
 class SSDumpResources(SlugStateT):
 	pass
 
-class SSHeal(SlugStateT):
-	def run(self, body):
-		pass
-
 class SSMove(SlugStateT):
 	def __init__(self, target):
 		SlugStateT.__init__(self)
@@ -191,7 +188,6 @@ SlugStateMachine.Attack = SSAttack
 SlugStateMachine.Idle = SSIdle
 SlugStateMachine.Build = SSBuild
 SlugStateMachine.Harvest = SSHarvest
-SlugStateMachine.Heal = SSHeal
 SlugStateMachine.Move = SSMove
 SlugStateMachine.Flee = SSFlee
 
