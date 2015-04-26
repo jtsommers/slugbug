@@ -453,6 +453,7 @@ class Slug(GameObject):
   """fearless, inhuman, slimy protagonists"""
   def __init__(self, world):
     super(Slug, self).__init__(world)
+    self.has_resource = False
     self.goal = None
     self.time_to_next_decision = 0
     self.speed = 100

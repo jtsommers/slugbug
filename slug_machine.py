@@ -2,6 +2,7 @@
 class SlugStateMachine():
 	def __init__(self, body):
 		self.body = body
+		self.has_resource = False
 		# Initialize to idle
 		self.currentState = SlugStateMachine.Idle()
 		self.currentState.run(self.body)
@@ -43,7 +44,11 @@ class SlugStateMachine():
 		if message is not 'collide': print message, details
 		nextState = self.get_state_for_stuff(message, details)
 		self.currentState = self.currentState.next(nextState)
-		self.currentState.run(self.body)
+		try:
+			self.currentState.run(self.body)
+		except ValueError:
+			print "Something wasn't found, idling"
+			self.currentState = SlugStateMachine.Idle()
 		# if nextState:
 		# 	self.currentState = nextState
 
@@ -144,6 +149,7 @@ class SSBuild(SlugStateT):
 		who = details['who']
 		if what is "Nest":
 			who.amount += 0.01
+		return SlugStateT.handle_collision(self, body, details)
 
 class SSHarvest(SlugStateT):
 	def lazy_init(self):
@@ -151,9 +157,21 @@ class SSHarvest(SlugStateT):
 		# Potentially add state transition to has and drop resources
 
 	def run(self, body):
-		target = body.find_nearest("Resource")
+		if body.has_resource:
+			target = body.find_nearest("Nest")
+		else:
+			target = body.find_nearest("Resource")
 		body.follow(target)
-		print "Harvest"
+
+	def handle_collision(self, body, details):
+		what = details['what']
+		who = details['who']
+		if what is "Resource" and not body.has_resource:
+			body.has_resource = True
+			who.amount -= 0.25
+		elif what is "Nest":
+			body.has_resource = False
+		return SlugStateT.handle_collision(self, body, details)
 
 class SSFlee(SlugStateT):
 	def run(self, body):
@@ -170,12 +188,6 @@ class SSFlee(SlugStateT):
 				body.amount = 1.0
 				return SlugStateMachine.Idle()
 		return self
-
-class SSHasResources(SlugStateT):
-	pass
-
-class SSDumpResources(SlugStateT):
-	pass
 
 class SSMove(SlugStateT):
 	def __init__(self, target):
