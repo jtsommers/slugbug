@@ -77,17 +77,8 @@ class StateT(State):
 		else:
 			print "Input not supported: ", inp
 			return self
-			# raise "Input not supported for current state"
 
 class SlugStateT(StateT):
-	# def next(self, inp, details=None):
-	# 	potentialTransition = StateT.next(self, inp)
-	# 	handleDetails = getattr(potentialTransition, "handle_details", None)
-	# 	if potentialTransition and callable(handle_details): #TODO: real thing
-	# 		return potentialTransition.handle_details(details)
-	# 	else:
-	# 		return potentialTransition
-	# Create a default list of transitions that reacts to orders and collisions
 	def lazy_init(self):
 		self.transitions = {
 			"SSMove":SlugStateMachine.Move,
@@ -121,14 +112,13 @@ class SlugStateT(StateT):
 # States
 class SSIdle(SlugStateT):
 	def run(self, body):
-		# TODO: Stop everything
 		body.stop()
 
 class SSAttack(SlugStateT):
 	def run(self, body):
-		# TODO: timers to swap targets
 		target = body.find_nearest("Mantis")
 		body.follow(target)
+		body.set_alarm(1)
 
 	def handle_collision(self, body, details):
 		what = details['what']
@@ -141,27 +131,26 @@ class SSBuild(SlugStateT):
 	def run(self, body):
 		target = body.find_nearest("Nest")
 		body.follow(target)
-		# Rest of build logic happens in handle_collision (Nest.amount += 0.01)
-		print "Build"
+		body.set_alarm(1)
 
 	def handle_collision(self, body, details):
 		what = details['what']
 		who = details['who']
 		if what is "Nest":
 			who.amount += 0.01
+			if who.amount > 1.0:
+				who.amount = 1.0
+				return SlugStateMachine.Idle()
 		return SlugStateT.handle_collision(self, body, details)
 
 class SSHarvest(SlugStateT):
-	def lazy_init(self):
-		SlugStateT.lazy_init(self)
-		# Potentially add state transition to has and drop resources
-
 	def run(self, body):
 		if body.has_resource:
 			target = body.find_nearest("Nest")
 		else:
 			target = body.find_nearest("Resource")
 		body.follow(target)
+		body.set_alarm(1)
 
 	def handle_collision(self, body, details):
 		what = details['what']
@@ -177,6 +166,7 @@ class SSFlee(SlugStateT):
 	def run(self, body):
 		target = body.find_nearest("Nest")
 		body.follow(target)
+		body.set_alarm(1)
 
 	def handle_collision(self, body, details):
 		what = details['what']
@@ -195,6 +185,7 @@ class SSMove(SlugStateT):
 		self.target = target
 	def run(self, body):
 		body.go_to(self.target)
+		body.set_alarm(1)
 
 SlugStateMachine.Attack = SSAttack
 SlugStateMachine.Idle = SSIdle
