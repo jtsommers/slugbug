@@ -45,8 +45,7 @@ class SlugStateMachine():
 			print "Unhandled order: ", details
 
 	def handle_collision(self, details):
-		print "Unhandled collision"
-		return self.currentState
+		return self.currentState.handle_collision(self.body, details)
 
 	def handle_timer(self, details): #TODO: revisit timer
 		print "Unhandled timer"
@@ -56,7 +55,6 @@ class SlugStateMachine():
 	def transition(self, message, details):
 		nextState = self.get_state_for_stuff(message, details)
 		self.currentState = self.currentState.next(nextState)
-		print self.currentState
 		self.currentState.run(self.body)
 		# if nextState:
 		# 	self.currentState = nextState
@@ -104,7 +102,7 @@ class SlugStateT(StateT):
 			"SSAttack":SlugStateMachine.Attack,
 			"SSBuild":SlugStateMachine.Build,
 			"SSHarvest":SlugStateMachine.Harvest,
-			"Flee":SlugStateMachine.Flee
+			"SSFlee":SlugStateMachine.Flee
 		}
 	def run(self, body):
 		assert 0, "run not implemented"
@@ -117,21 +115,38 @@ class SlugStateT(StateT):
 		else:
 			print "Input not supported: ", inp
 			return self
+	def handle_collision(self, body, details):
+		what, who = details.values()
+		if what is "Mantis" and body.amount < 0.5:
+			print "Starting to flee"
+			return SlugStateMachine.Flee()
+		else:
+			return self
+
 
 # States
 class SSIdle(SlugStateT):
 	def run(self, body):
 		# TODO: Stop everything
 		body.stop()
-		print "Idling"
 
 class SSAttack(SlugStateT):
 	def run(self, body):
-		# TODO: attack a thing
-		print "Attack"
+		# TODO: timers to swap targets
+		target = body.find_nearest("Mantis")
+		body.follow(target)
+
+	def handle_collision(self, body, details):
+		what, who = details.values()
+		if details['what'] is "Mantis":
+			details['who'].amount -= 0.05
+		return SlugStateT.handle_collision(self, body, details)
 
 class SSBuild(SlugStateT):
 	def run(self, body):
+		target = body.find_nearest("Nest")
+		body.follow(target)
+		# Rest of build logic happens in handle_collision (Nest.amount += 0.01)
 		print "Build"
 
 class SSHarvest(SlugStateT):
@@ -140,11 +155,23 @@ class SSHarvest(SlugStateT):
 		# Potentially add state transition to has and drop resources
 
 	def run(self, body):
+		target = body.find_nearest("Resource")
+		body.follow(target)
 		print "Harvest"
 
 class SSFlee(SlugStateT):
 	def run(self, body):
-		print "Flee"
+		target = body.find_nearest("Nest")
+		body.follow(target)
+
+	def handle_collision(self, body, details):
+		what, who = details.values()
+		if what is "Nest":
+			body.amount += 0.05
+			if body.amount >= 1.0:
+				body.amount = 1.0
+				return SlugStateMachine.Idle()
+		return self
 
 class SSHasResources(SlugStateT):
 	pass
@@ -154,7 +181,7 @@ class SSDumpResources(SlugStateT):
 
 class SSHeal(SlugStateT):
 	def run(self, body):
-		print "Heal"
+		pass
 
 class SSMove(SlugStateT):
 	def __init__(self, target):
