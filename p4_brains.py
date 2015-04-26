@@ -1,5 +1,6 @@
 
 import random
+from slug_machine import SlugStateMachine
 
 # EXAMPLE STATE MACHINE
 class MantisBrain:
@@ -47,12 +48,16 @@ class SlugBrain:
 
   def __init__(self, body):
     self.body = body
+    self.stateMachine = SlugStateMachine()
 
 
   def handle_event(self, message, details):
     # TODO: IMPLEMENT THIS METHOD
     #  (Use helper methods and classes to keep your code organized where
     #  approprioate.)
+    print message
+    print details
+    self.stateMachine.transition(message, details)
     pass    
 
 world_specification = {
