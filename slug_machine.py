@@ -1,15 +1,3 @@
-# A simple base class for a state machine
-class StateMachine:
-	def __init__(self, initialState):
-		self.currentState = initialState
-		self.currentState.run()
-	# Template method:
-	def runAll(self, inputs):
-		for i in inputs:
-			print(i)
-			self.currentState = self.currentState.next(i)
-			self.currentState.run()
-
 # A state machine for slugs
 class SlugStateMachine():
 	def __init__(self, body):
@@ -18,21 +6,21 @@ class SlugStateMachine():
 		self.currentState = SlugStateMachine.Idle()
 		self.currentState.run(self.body)
 		SlugStateMachine.OrderStates = {
-			"a": SlugStateMachine.Attack(),
-			"b": SlugStateMachine.Build(),
-			"h": SlugStateMachine.Harvest(),
-			"i": SlugStateMachine.Idle()
+			"a": SlugStateMachine.Attack,
+			"b": SlugStateMachine.Build,
+			"h": SlugStateMachine.Harvest,
+			"i": SlugStateMachine.Idle
 			# Move is indexed on a tuple, so special case that out when getting a move order
 		}
 		SlugStateMachine.MessageMap = {
-			"order":  self.get_order,
-			"collide": self.handle_collision,
-			"timer": self.handle_timer
+			"order":  SlugStateMachine.get_order,
+			"collide": SlugStateMachine.handle_collision,
+			"timer": SlugStateMachine.handle_timer
 		}
 
 	def get_state_for_stuff(self, message, details):
 		if SlugStateMachine.MessageMap.has_key(message):
-			return SlugStateMachine.MessageMap[message](details)
+			return SlugStateMachine.MessageMap[message](self, details)
 		else:
 			print "Unhandled Message: ", message
 
@@ -40,7 +28,7 @@ class SlugStateMachine():
 		if type(details) is tuple:
 			return SlugStateMachine.Move(details)
 		elif SlugStateMachine.OrderStates.has_key(details):
-			return SlugStateMachine.OrderStates[details];
+			return SlugStateMachine.OrderStates[details]();
 		else:
 			print "Unhandled order: ", details
 
@@ -48,11 +36,11 @@ class SlugStateMachine():
 		return self.currentState.handle_collision(self.body, details)
 
 	def handle_timer(self, details): #TODO: revisit timer
-		print "Unhandled timer"
 		print self.currentState
 		return self.currentState
 
 	def transition(self, message, details):
+		if message is not 'collide': print message, details
 		nextState = self.get_state_for_stuff(message, details)
 		self.currentState = self.currentState.next(nextState)
 		self.currentState.run(self.body)
@@ -116,7 +104,8 @@ class SlugStateT(StateT):
 			print "Input not supported: ", inp
 			return self
 	def handle_collision(self, body, details):
-		what, who = details.values()
+		what = details['what']
+		who = details['who']
 		if what is "Mantis" and body.amount < 0.5:
 			print "Starting to flee"
 			return SlugStateMachine.Flee()
@@ -137,9 +126,10 @@ class SSAttack(SlugStateT):
 		body.follow(target)
 
 	def handle_collision(self, body, details):
-		what, who = details.values()
-		if details['what'] is "Mantis":
-			details['who'].amount -= 0.05
+		what = details['what']
+		who = details['who']
+		if what is "Mantis":
+			who.amount -= 0.05
 		return SlugStateT.handle_collision(self, body, details)
 
 class SSBuild(SlugStateT):
@@ -148,6 +138,12 @@ class SSBuild(SlugStateT):
 		body.follow(target)
 		# Rest of build logic happens in handle_collision (Nest.amount += 0.01)
 		print "Build"
+
+	def handle_collision(self, body, details):
+		what = details['what']
+		who = details['who']
+		if what is "Nest":
+			who.amount += 0.01
 
 class SSHarvest(SlugStateT):
 	def lazy_init(self):
@@ -165,7 +161,8 @@ class SSFlee(SlugStateT):
 		body.follow(target)
 
 	def handle_collision(self, body, details):
-		what, who = details.values()
+		what = details['what']
+		who = details['who']
 		if what is "Nest":
 			body.amount += 0.05
 			if body.amount >= 1.0:
